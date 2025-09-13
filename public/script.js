@@ -13,7 +13,7 @@ async function loadSeasonalIngredients() {
       dropdown.appendChild(opt);
     });
 
-    // Optionally load recipes for the first ingredient
+    // Load recipes for first ingredient
     if (ingredients.length > 0) {
       fetchRecipes(ingredients[0]);
     }
@@ -26,10 +26,14 @@ async function loadSeasonalIngredients() {
 async function fetchRecipes(seasonal) {
   try {
     const res = await fetch(`/api/recipes/${encodeURIComponent(seasonal)}`);
+    if (!res.ok || !res.headers.get("content-type").includes("application/json")) {
+      throw new Error("Invalid response from server");
+    }
     const recipes = await res.json();
     displayRecipes(recipes);
   } catch (err) {
-    console.error('Failed to fetch recipes:', err);
+    console.error('Error loading recipes:', err);
+    document.getElementById('recipes').innerHTML = `<p style="color:red;">Error loading recipes.</p>`;
   }
 }
 
