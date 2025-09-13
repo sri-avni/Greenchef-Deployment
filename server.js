@@ -70,7 +70,8 @@ app.get('/api/recipes/:ingredient', (req, res) => {
 });
 
 // --- Fallback: Always serve index.html for unknown routes ---
-app.get('*', (req, res) => {
+// --- Fallback: Always serve index.html for unknown routes ---
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -78,3 +79,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
