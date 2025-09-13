@@ -4,55 +4,77 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Works locally & on Render
 
+// Middleware
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// /api/seasonal -> returns only ingredients that actually yield recipes
+// --- API: Get seasonal ingredients ---
 app.get('/api/seasonal', (req, res) => {
-  const py = spawn('python3', ['ml/get_seasonal.py']);
-  let out = '', errOut = '';
+  const pyProcess = spawn('python3', [path.join(__dirname, 'ml', 'get_seasonal.py')]);
 
-  py.stdout.on('data', (d) => out += d.toString());
-  py.stderr.on('data', (d) => errOut += d.toString());
+  let data = '';
+  let error = '';
 
-  py.on('close', () => {
-    if (errOut) console.error('get_seasonal stderr:', errOut);
+  pyProcess.stdout.on('data', chunk => {
+    data += chunk.toString();
+  });
+
+  pyProcess.stderr.on('data', chunk => {
+    error += chunk.toString();
+  });
+
+  pyProcess.on('close', code => {
+    if (code !== 0 || error) {
+      console.error('Python error:', error);
+      return res.status(500).json({ error: 'Failed to load ingredients' });
+    }
     try {
-      const data = JSON.parse(out);
-      res.json(data);
+      res.json(JSON.parse(data));
     } catch (e) {
-      console.error('Failed to parse /api/seasonal:', e, out);
-      res.status(500).json({ error: 'Failed to load seasonal ingredients' });
+      console.error('JSON parse error:', e);
+      res.status(500).json({ error: 'Invalid data format from Python' });
     }
   });
 });
 
-// /api/recipes -> expects { seasonal }
-app.post('/api/recipes', (req, res) => {
-  const { seasonal = '' } = req.body;
+// --- API: Get recipes for an ingredient ---
+app.get('/api/recipes/:ingredient', (req, res) => {
+  const ingredient = req.params.ingredient;
+  const pyProcess = spawn('python3', [path.join(__dirname, 'ml', 'model.py'), ingredient]);
 
-  // Be flexible: try with both-arg and single-arg modes so model.py can parse either.
-  const py = spawn('python', ['ml/model.py', '[]', seasonal]);
+  let data = '';
+  let error = '';
 
-  let out = '', errOut = '';
-  py.stdout.on('data', (d) => out += d.toString());
-  py.stderr.on('data', (d) => errOut += d.toString());
+  pyProcess.stdout.on('data', chunk => {
+    data += chunk.toString();
+  });
 
-  py.on('close', () => {
-    if (errOut) console.error('model stderr:', errOut);
+  pyProcess.stderr.on('data', chunk => {
+    error += chunk.toString();
+  });
+
+  pyProcess.on('close', code => {
+    if (code !== 0 || error) {
+      console.error('Python error:', error);
+      return res.status(500).json({ error: 'Failed to load recipes' });
+    }
     try {
-      const data = JSON.parse(out);
-      res.json(Array.isArray(data) ? data : []);
+      res.json(JSON.parse(data));
     } catch (e) {
-      console.error('Failed to parse /api/recipes:', e, out);
-      res.status(500).json({ error: 'Failed to load recipes' });
+      console.error('JSON parse error:', e);
+      res.status(500).json({ error: 'Invalid data format from Python' });
     }
   });
 });
 
+// --- Fallback: Always serve index.html for unknown routes ---
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start server
 app.listen(PORT, () => {
-  console.log(`GreenChef server running at http://localhost:${PORT}`);
-
+  console.log(`Server running on port ${PORT}`);
 });
