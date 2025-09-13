@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GreenChef 🍃</title>
+  <style>
+    /* Full-page patterned background */
+    body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background-color: #ffffff;
+  background-image: url("https://copilot.microsoft.com/th/id/BCO.b3150d90-7d81-4494-8cba-c17ae6728809.png");
+  background-repeat: repeat;
+  background-size: 525px 525x;/* adjust this to zoom in/out */
+}
+
+    /* Centered white overlay */
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #2e8b57;
+    }
+    .container h1 {
+      background-color: #2e8b57;        /* dark sea-green */
+      color: #ffffff;                   /* white text */
+      margin: -30px -30px 20px -30px;   /* stretch to container edges */
+      padding: 20px 0;                  /* vertical padding */
+      text-align: center;
+      border-radius: 8px 8px 0 0;       /* rounded top corners */
+    }
+
+
+    /* Tips Section */
+    .tips { margin-bottom: 40px; }
+    .tip { margin-bottom: 24px; }
+    .tip h3 {
+      margin-bottom: 8px;
+      font-size: 1.2em;
+    }
+    .tip p {
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Dropdown + recipes styling */
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+      background: #fff;
+    }
+    #recipesSection {
+      margin-top: 30px;
+    }
+    .recipe {
+      border: 1px solid #cce5cc;
+      border-radius: 8px;
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .recipe:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+    .recipe h3 {
+      margin-top: 0;
+      color: #2e8b57;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GreenChef 🍃</h1>
+    <!-- Sustainability Tips -->
+    <div class="tips">
+      <h2>Sustainability Tips</h2>
+      <div class="tip">
+        <h3>Why Plant-Based Recipes?</h3>
+        <p>
+          Plant-based diets are not only nutritious but also have a lower environmental footprint.
+          They reduce greenhouse gas emissions, save water, and require fewer natural resources
+          compared to animal-based dishes.
+        </p>
+      </div>
+      <div class="tip">
+        <h3>How the Sustainability Score Works</h3>
+        <p>
+          Every recipe is scored from 1 to 10 based on ingredient sustainability,
+          considering local sourcing, seasonality, and organic practices.
+          A higher score means a more planet-friendly dish.
+        </p>
+      </div>
+      <div class="tip">
+        <h3>How to eliminate wastage of kitchen scraps</h3>
+        <p>
+          Composting kitchen scraps turns food waste into nutrient-rich fertilizer, 
+          replacing energy-intensive synthetic fertilizers,leads to no waste of food,directly shrinking your carbon footprint.
+        </p>
+      </div>
+    </div>
+
+    <!-- Dropdown + recipe UI -->
+    <p>Select a seasonal ingredient to see related recipes with sustainability info:</p>
+    <label for="seasonalSelect">Seasonal Ingredient:</label>
+    <select id="seasonalSelect">
+      <option value="">-- Loading... --</option>
+    </select>
+
+    <h2 id="recipesSection">🍲 Recipes for Selected Ingredient</h2>
+    <div id="recipes"></div>
+  </div>
+
+  <script src="script.js"></script>
+
+  <script>
+    // Load seasonal ingredients from backend
+    async function loadSeasonalIngredients() {
+      const select = document.getElementById('seasonalSelect');
+      select.innerHTML = '<option value="">-- Select Ingredient --</option>';
+
+      try {
+        const res = await fetch('/api/seasonal');
+        const ingredients = await res.json();
+
+        ingredients.forEach(i => {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i.charAt(0).toUpperCase() + i.slice(1);
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Error loading ingredients:', err);
+        select.innerHTML = '<option value="">Failed to load ingredients</option>';
+      }
+    }
+
+    // Load recipes for a given seasonal ingredient
+    async function loadRecipes(seasonal) {
+      const container = document.getElementById('recipes');
+      container.innerHTML = '<p>Loading recipes...</p>';
+
+      try {
+        const res = await fetch('/api/recipes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seasonal }) // ✅ matches server.js
+        });
+
+        const recipes = await res.json();
+        if (!recipes.length) {
+          container.innerHTML = '<p>No recipes found for this ingredient.</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        recipes.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'recipe';
+          div.innerHTML = `
+            <h3>${r.name}</h3>
+            <p><strong>Ingredients:</strong> ${Array.isArray(r.ingredients) ? r.ingredients.join(', ') : r.ingredients}</p>
+            <p><strong>Instructions:</strong> ${r.instructions}</p>
+            <p><strong>Prep Time:</strong> ${r['Prep Time'] || 'N/A'} mins</p>
+            <p><strong>Diet Type:</strong> ${r['Diet Type'] || 'N/A'}</p>
+            <p><strong>Sustainability Score:</strong> ${r['Sustainability Score'] || 'N/A'}</p>
+            <p><strong style="color:#b22222;">Waste Parts:</strong> ${r['Waste Parts'] || 'None'}</p>
+            <p><strong style="color:#2e8b57;">Reuse Suggestions:</strong> ${r['Reuse Suggestions'] || 'None'}</p>
+          `;
+          container.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error('Error loading recipes:', err);
+        container.innerHTML = '<p>Error loading recipes.</p>';
+      }
+    }
+
+    // When dropdown changes, load recipes
+    document.getElementById('seasonalSelect').addEventListener('change', async (e) => {
+      const val = e.target.value;
+      if (val) {
+        await loadRecipes(val);
+        document.getElementById('recipesSection').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        document.getElementById('recipes').innerHTML = '';
+      }
+    });
+
+    // On page load, populate dropdown
+    loadSeasonalIngredients();
+  </script>
+</body>
+</html>
