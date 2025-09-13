@@ -12,6 +12,11 @@ async function loadSeasonalIngredients() {
       opt.textContent = ing;
       dropdown.appendChild(opt);
     });
+
+    // Optionally load recipes for the first ingredient
+    if (ingredients.length > 0) {
+      fetchRecipes(ingredients[0]);
+    }
   } catch (err) {
     console.error('Failed to load seasonal ingredients:', err);
   }
@@ -20,11 +25,7 @@ async function loadSeasonalIngredients() {
 // Fetch recipes for the selected ingredient
 async function fetchRecipes(seasonal) {
   try {
-    const res = await fetch('/api/recipes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seasonal })
-    });
+    const res = await fetch(`/api/recipes/${encodeURIComponent(seasonal)}`);
     const recipes = await res.json();
     displayRecipes(recipes);
   } catch (err) {
@@ -51,14 +52,13 @@ function displayRecipes(recipes) {
   });
 }
 
-// When dropdown changes, fetch recipes for that ingredient
-document.getElementById('ingredientDropdown').addEventListener('change', e => {
-  fetchRecipes(e.target.value);
+// Wait until DOM is ready before attaching event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  const dropdown = document.getElementById('ingredientDropdown');
+  if (dropdown) {
+    dropdown.addEventListener('change', e => {
+      fetchRecipes(e.target.value);
+    });
+  }
+  loadSeasonalIngredients();
 });
-
-// On page load, populate dropdown and load first ingredient's recipes
-window.onload = async () => {
-  await loadSeasonalIngredients();
-  const first = document.getElementById('ingredientDropdown').value;
-  if (first) fetchRecipes(first);
-};
