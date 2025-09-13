@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // /api/seasonal -> returns only ingredients that actually yield recipes
 app.get('/api/seasonal', (req, res) => {
-  const py = spawn('python', ['ml/get_seasonal.py']);
+  const py = spawn('python3', ['ml/get_seasonal.py']);
   let out = '', errOut = '';
 
   py.stdout.on('data', (d) => out += d.toString());
@@ -54,4 +54,5 @@ app.post('/api/recipes', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`GreenChef server running at http://localhost:${PORT}`);
+
 });
