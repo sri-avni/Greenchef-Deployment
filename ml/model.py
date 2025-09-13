@@ -7,20 +7,15 @@ def norm(s: str) -> str:
     return (s or "").strip().lower().rstrip('s')
 
 def load_df():
+    # Use comma delimiter unless your CSV is tab-delimited
     DATA_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'recipes.csv')
-    return pd.read_csv(DATA_PATH, delimiter='\t')
+    return pd.read_csv(DATA_PATH)
 
 def parse_args():
-    # Accept: model.py [ingredients_json] [seasonal]
-    # Frontend sends only seasonal; we’ll tolerate missing pieces.
-    seasonal = ""
-    if len(sys.argv) >= 3:
-        # When server passes both args
-        seasonal = sys.argv[2] or ""
-    elif len(sys.argv) == 2:
-        # When server passes only seasonal
-        seasonal = sys.argv[1] or ""
-    return seasonal
+    # Accept: model.py [seasonal]
+    if len(sys.argv) >= 2:
+        return sys.argv[1].strip()
+    return ""
 
 def filter_recipes(df: pd.DataFrame, seasonal: str):
     seasonal_n = norm(seasonal)
@@ -41,7 +36,7 @@ def filter_recipes(df: pd.DataFrame, seasonal: str):
     # Shape output for the frontend
     results = []
     for _, row in df.iterrows():
-        ingredients_raw = row['Ingredients']
+        ingredients_raw = row.get('Ingredients', '')
         ingredients_list = [i.strip() for i in str(ingredients_raw).split(',') if i.strip()]
         results.append({
             "name": row.get("Name", ""),
